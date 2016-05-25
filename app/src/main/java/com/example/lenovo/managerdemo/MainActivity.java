@@ -1,12 +1,16 @@
 package com.example.lenovo.managerdemo;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Debug;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -19,7 +23,10 @@ public class MainActivity extends AppCompatActivity {
     Button bt2;
     Button bt3;
     Button bt4;
-
+    Button bt5;
+    Button bt6;
+    Button bt7;
+    Button bt8;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,6 +39,10 @@ public class MainActivity extends AppCompatActivity {
         bt2 = (Button) findViewById(R.id.button2);
         bt3 = (Button) findViewById(R.id.button3);
         bt4 = (Button) findViewById(R.id.button4);
+        bt5 = (Button) findViewById(R.id.button5);
+        bt6 = (Button) findViewById(R.id.button6);
+        bt7 = (Button) findViewById(R.id.button7);
+        bt8 = (Button) findViewById(R.id.button8);
         bt1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -50,6 +61,33 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 install();
+            }
+        });
+
+        bt4.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                totalMemory();
+            }
+        });
+
+        bt5.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                processMemory();
+            }
+        });
+        bt6.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getActivity();
+                getService();
+            }
+        });
+        bt7.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addView();
             }
         });
     }
@@ -85,6 +123,53 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    private void totalMemory(){
+        ActivityManager manager=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo memory=new ActivityManager.MemoryInfo();
+        manager.getMemoryInfo(memory);
+        long size=memory.availMem;
+        String memorySize= Formatter.formatFileSize(MainActivity.this, size);
+        Log.e("Total Memory", memorySize);
+    }
+
+    private void processMemory(){
+        ActivityManager manager=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> processInfoList=manager.getRunningAppProcesses();
+        Log.e("Process number"," "+processInfoList.size());
+        for(int i=0;i<processInfoList.size();i++){
+            ActivityManager.RunningAppProcessInfo processInfo=processInfoList.get(i);
+            int pid=processInfo.pid;
+            int uid=processInfo.uid;
+            String processName=processInfo.processName;
+            int [] memoryId=new int[]{pid};
+            Debug.MemoryInfo[] memoryInfo=manager.getProcessMemoryInfo(memoryId);
+            int processSize=memoryInfo[0].getTotalPss();
+            Log.e("Process","pid "+pid+" ProcessName: "+processName);
+            Log.e("Process","uid "+uid+" ProcessSize: "+processSize+" kb");
+        }
+    }
+
+
+    private void getActivity(){
+        ActivityManager manager=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningTaskInfo> taskInfos=manager.getRunningTasks(1000);
+        for(ActivityManager.RunningTaskInfo taskInfo: taskInfos){
+            Log.e("Activity",taskInfo.baseActivity.getClassName());
+        }
+    }
+
+    private void getService(){
+        ActivityManager manager=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningServiceInfo> serviceInfos=manager.getRunningServices(100);
+        for(ActivityManager.RunningServiceInfo serviceInfo: serviceInfos){
+            Log.e("Service",serviceInfo.service.getClassName());
+        }
+    }
+
+    private void addView(){
+        Intent intent=new Intent(MainActivity.this, WindowService.class);
+        startService(intent);
+    }
 
 
 }
