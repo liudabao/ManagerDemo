@@ -1,18 +1,23 @@
 package com.example.lenovo.managerdemo;
 
 import android.app.ActivityManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Debug;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 
 import java.io.File;
@@ -27,10 +32,60 @@ public class MainActivity extends AppCompatActivity {
     Button bt6;
     Button bt7;
     Button bt8;
+    MyView myView;
+    WindowService.MyBinder binder;
+    WindowManager manager;
+    WindowManager.LayoutParams params;
+    int viewX;
+    int viewY;
+
+    ServiceConnection connection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            binder=(WindowService.MyBinder)service;
+            binder.init();
+            myView=binder.getView();
+            params=binder.getLayout();
+            myView.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    int x=(int)event.getRawX();
+                    int y=(int)event.getRawY();
+                    switch (event.getAction()){
+                        case MotionEvent.ACTION_DOWN:
+                            viewX=(int)event.getX();
+                            viewY=(int)event.getY();
+                            break;
+                        case MotionEvent.ACTION_MOVE:
+                            params.x=x-viewX;
+                            params.y=y-viewY;
+                            manager.updateViewLayout(myView, params);
+                            //scrollBy(viewX-x, viewY-y);
+                            //viewX=x;
+                            // viewY=y;
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            params.x=x-viewX;
+                            params.y=y-viewY;
+                            manager.updateViewLayout(myView, params);
+                            break;
+                    }
+                    return true;
+                }
+            });
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+            Log.e("service", "unbind");
+        }
+    };
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        manager=(WindowManager)getSystemService(Context.WINDOW_SERVICE);
         initView();
     }
 
@@ -90,6 +145,13 @@ public class MainActivity extends AppCompatActivity {
                 addView();
             }
         });
+        bt8.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                removeView();
+            }
+        });
+
     }
 
     private void packageInfo(){
@@ -168,8 +230,35 @@ public class MainActivity extends AppCompatActivity {
 
     private void addView(){
         Intent intent=new Intent(MainActivity.this, WindowService.class);
-        startService(intent);
+        bindService(intent, connection, BIND_AUTO_CREATE);
+       // startService(intent);
     }
 
-
+    private void removeView(){
+        Intent intent=new Intent(MainActivity.this, WindowService.class);
+        unbindService(connection);
+       // stopService(intent);
+    }
+    @Override
+    public boolean onTouchEvent(MotionEvent event){
+        int x=(int)event.getX();
+        int y=(int)event.getY();
+        switch (event.getAction()){
+            case MotionEvent.ACTION_DOWN:
+                viewX=x;
+                viewY=y;
+                break;
+            case MotionEvent.ACTION_MOVE:
+                params.x=x-viewX;
+                params.y=y-viewY;
+                manager.updateViewLayout(myView, params);
+                //scrollBy(viewX-x, viewY-y);
+                //viewX=x;
+                // viewY=y;
+                break;
+            case MotionEvent.ACTION_UP:
+                break;
+        }
+        return true;
+    }
 }
